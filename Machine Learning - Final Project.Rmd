@@ -1,0 +1,82 @@
+---
+title: "Machine Learning - Final Project"
+author: "MJ"
+date: "3 April 2016"
+output: word_document
+---
+```{r, echo=FALSE, results="hide"}
+setwd("C:/Users/Michal/Desktop/_data science/08 - Machine Learning/Assignments/Final project/data")
+
+```
+
+
+```{r, message=FALSE}
+library(dplyr)
+library(caret)
+library(rattle)
+library(randomForest)
+library(rpart)
+```
+
+# Data processing
+
+## Load data
+
+```{r}
+training <- read.csv("./data/pml-training.csv", na.strings = c("NA", ""))
+testing <- read.csv("./data/pml-testing.csv", na.strings = c("NA", ""))
+```
+
+## Edit data
+
+We get rid of columns with missing data.
+
+```{r}
+training <- training[, colSums(is.na(training)) == 0]
+testing <- testing[, colSums(is.na(testing)) == 0]
+```
+
+We also remove columns predictors that are not relevant to predict the classe (first seven columns)
+
+```{r}
+training <- training[, -c(1:7)]
+testing <- testing[, -c(1:7)]
+```
+
+To be able to get out-of-sample errors we need to split the training data into training and validation sets.
+
+```{r}
+set.seed(100) 
+inTrain <- createDataPartition(training$classe, p = 0.7, list = FALSE)
+train <- training[inTrain, ]
+valid <- training[-inTrain, ]
+```
+
+#Analysis
+
+We will compare results from two different models - a classifiacation tree and a random forest.
+
+## Classification Tree
+```{r}
+control <- trainControl(method = "cv", number = 5)
+fit_rpart <- train(classe ~ ., data = train, method = "rpart", 
+                   trControl = control)
+modFitRPART <- train(classe ~ ., method="rpart", data=train, trControl=control)
+predRPART <- predict(modFitRPART, valid)
+confusionMatrix(predRPART, valid$classe)$overall[1]
+```
+
+## Random Forest
+
+```{r}
+
+modFitRF <- train(classe ~ ., data = train, method = "rf",trControl = control)
+predRF <- predict(modFitRF, valid)
+confusionMatrix(predRF, valid$classe)$overall[1]
+```
+
+Random forest appears most accurate and so we use it to predict the test data. The predicted values are then:
+
+```{r}
+(predict(modFitRF, testing))
+```
